@@ -11,7 +11,10 @@ import os
 import ftrack_api
 import ftrack_connect.application
 import ftrack_connect_nuke
+import ftrack
 
+import settingsManager
+globalSettings = settingsManager.globalSettings()
 
 class LaunchApplicationAction(object):
     '''Discover and launch nuke.'''
@@ -171,6 +174,7 @@ class ApplicationStore(ftrack_connect.application.ApplicationStore):
 
         '''
         applications = []
+        versions = [v.replace('.', '\.') for v in globalSettings.get('FTRACK_CONNECT').get('NUKE')]
 
         if sys.platform == 'darwin':
             prefix = ['/', 'Applications']
@@ -205,69 +209,75 @@ class ApplicationStore(ftrack_connect.application.ApplicationStore):
             # Specify custom expression for Nuke to ensure the complete version
             # number (e.g. 9.0v3) is picked up.
             nuke_version_expression = re.compile(
-                r'(?P<version>[\d.]+[vabc]+[\dvabc.]*)'
+                r'(?P<version>{})'.format('|'.join(versions))
             )
 
             applications.extend(self._searchFilesystem(
                 expression=prefix + ['Nuke.*', 'Nuke\d.+.exe'],
-                versionExpression=nuke_version_expression,
                 label='Nuke',
                 variant='{version}',
                 applicationIdentifier='nuke_{version}',
-                icon='nuke'
+                icon='nuke',
+                versionExpression=nuke_version_expression
             ))
 
             # Add NukeX as a separate application
             applications.extend(self._searchFilesystem(
                 expression=prefix + ['Nuke.*', 'Nuke\d.+.exe'],
-                versionExpression=nuke_version_expression,
                 launchArguments=['--nukex'],
                 label='NukeX',
                 variant='{version}',
                 applicationIdentifier='nukex_{version}',
-                icon='nukex'
+                icon='nukex',
+                versionExpression=nuke_version_expression
             ))
 
             # Add NukeAssist as a separate application
             applications.extend(self._searchFilesystem(
                 expression=prefix + ['Nuke.*', 'Nuke\d.+.exe'],
-                versionExpression=nuke_version_expression,
                 launchArguments=['--nukeassist'],
                 label='NukeAssist',
                 variant='{version}',
                 applicationIdentifier='nukeassist_{version}',
-                icon='nuke'
+                icon='nuke',
+                versionExpression=nuke_version_expression
             ))
 
         elif sys.platform == 'linux2':
 
+            nuke_version_expression = re.compile(
+                r'Nuke(?P<version>{})'.format('|'.join(versions))
+            )
             applications.extend(self._searchFilesystem(
-                versionExpression=r'Nuke(?P<version>.*)\/.+$',
+                # versionExpression=r'Nuke(?P<version>.*)\/.+$',
                 expression=['/', 'usr', 'local', 'Nuke.*', 'Nuke\d.+'],
                 label='Nuke',
                 variant='{version}',
                 applicationIdentifier='nuke_{version}',
-                icon='nuke'
+                icon='nuke',
+                versionExpression=nuke_version_expression
             ))
 
             applications.extend(self._searchFilesystem(
-                versionExpression=r'Nuke(?P<version>.*)\/.+$',
+                # versionExpression=r'Nuke(?P<version>.*)\/.+$',
                 expression=['/', 'usr', 'local', 'Nuke.*', 'Nuke\d.+'],
                 label='NukeX',
                 variant='{version}',
                 applicationIdentifier='nukex_{version}',
                 icon='nukex',
-                launchArguments=['--nukex']
+                launchArguments=['--nukex'],
+                versionExpression=nuke_version_expression
             ))
 
             applications.extend(self._searchFilesystem(
-                versionExpression=r'Nuke(?P<version>.*)\/.+$',
+                # versionExpression=r'Nuke(?P<version>.*)\/.+$',
                 expression=['/', 'usr', 'local', 'Nuke.*', 'Nuke\d.+'],
                 label='NukeAssist',
                 variant='{version}',
                 applicationIdentifier='nukeassist_{version}',
                 icon='nuke',
-                launchArguments=['--nukeassist']
+                launchArguments=['--nukeassist'],
+                versionExpression=nuke_version_expression
             ))
 
         self.logger.debug(
@@ -301,33 +311,22 @@ class ApplicationLauncher(ftrack_connect.application.ApplicationLauncher):
         )._getApplicationEnvironment(application, context)
 
         entity = context['selection'][0]
+        task = ftrack.Task(entity['entityId'])
+        taskParent = task.getParent()
 
-        task = self.session.get(
-            'Task', entity['entityId']
-        )
-
-        taskParent = task.get(
-            'parent'
-        )
-
-        try:
-            environment['FS'] = str(
-                int(taskParent['custom_attributes'].get('fstart'))
-            )
-
-        except Exception:
-            environment['FS'] = '1'
-
-        try:
-            environment['FE'] = str(
-                int(taskParent['custom_attributes'].get('fend'))
-            )
-
-        except Exception:
-            environment['FE'] = '1'
+        frameRange = self.applicationStore.arkFt.getFrameRange(taskParent)
+        environment['FS'] = frameRange.get('start')
+        environment['FE'] = frameRange.get('end')
 
         environment['FTRACK_TASKID'] = task.get('id')
         environment['FTRACK_SHOTID'] = task.get('parent_id')
+
+        taskFile = self.applicationStore.arkFt.getHighestOrNewFilename(
+            environment['FTRACK_TASKID'],
+            'nk',
+            'nar'
+        )
+        application['launchArguments'] = [taskFile]
 
         nuke_plugin_path = os.path.abspath(
             os.path.join(
