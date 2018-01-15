@@ -175,7 +175,7 @@ class ApplicationStore(ftrack_connect.application.ApplicationStore):
 
 		'''
 		applications = []
-		versions = [v.replace('.', '\.') for v in globalSettings.get('FTRACK_CONNECT').get('NUKE')]
+		versions = [v.replace('.', '\.') for v in globalSettings.get('FTRACK_CONNECT').get('NUKE').get('version')]
 
 		if sys.platform == 'darwin':
 			prefix = ['/', 'Applications']
