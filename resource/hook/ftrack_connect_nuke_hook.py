@@ -293,8 +293,6 @@ class ApplicationStore(ftrack_connect.application.ApplicationStore):
 class ApplicationLauncher(ftrack_connect.application.ApplicationLauncher):
 	'''Custom launcher to modify environment before launch.'''
 
-	extension = 'nk'
-
 	def __init__(self, application_store, plugin_path, session):
 		'''.'''
 		super(ApplicationLauncher, self).__init__(application_store)
