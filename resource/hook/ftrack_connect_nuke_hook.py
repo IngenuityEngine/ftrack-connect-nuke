@@ -66,7 +66,7 @@ class LaunchApplicationAction(object):
 		'''Register discover actions on logged in user.'''
 		self.session.event_hub.subscribe(
 			'topic=ftrack.action.discover and source.user.username={0}'.format(
-				getpass.getuser()
+				self.session.api_user
 			),
 			self.discover,
 			priority=10
@@ -75,7 +75,7 @@ class LaunchApplicationAction(object):
 		self.session.event_hub.subscribe(
 			'topic=ftrack.action.launch and source.user.username={0} '
 			'and data.actionIdentifier={1}'.format(
-				getpass.getuser(), self.identifier
+				self.session.api_user, self.identifier
 			),
 			self.launch
 		)
@@ -314,46 +314,47 @@ class ApplicationLauncher(ftrack_connect.application.ApplicationLauncher):
 		entity = context['selection'][0]
 		task = self.session.query('Task where id is "{}"'.format(entity['entityId'])).one()
 
-		frameRange = arkFTrack.ftrackUtil.getFrameRange(task.get('parent'))
-		environment['FS'] = frameRange.get('start_frame')
-		environment['FE'] = frameRange.get('end_frame')
+		# most of the environment setup has been moved to launchTask
+		# frameRange = arkFTrack.ftrackUtil.getFrameRange(task.get('parent'))
+		# environment['FS'] = frameRange.get('start_frame')
+		# environment['FE'] = frameRange.get('end_frame')
 
 		environment['FTRACK_TASKID'] = task.get('id')
 		environment['FTRACK_SHOTID'] = task.get('parent_id')
 
-		nuke_plugin_path = os.path.abspath(
-			os.path.join(
-				self.plugin_path, 'nuke_path'
-			)
-		)
-		environment = ftrack_connect.application.appendPath(
-			nuke_plugin_path, 'NUKE_PATH', environment
-		)
+		# nuke_plugin_path = os.path.abspath(
+		# 	os.path.join(
+		# 		self.plugin_path, 'nuke_path'
+		# 	)
+		# )
+		# environment = ftrack_connect.application.appendPath(
+		# 	nuke_plugin_path, 'NUKE_PATH', environment
+		# )
 
-		nuke_plugin_path = os.path.abspath(
-			os.path.join(
-				self.plugin_path, 'ftrack_connect_nuke'
-			)
-		)
-		environment = ftrack_connect.application.appendPath(
-			self.plugin_path, 'FOUNDRY_ASSET_PLUGIN_PATH', environment
-		)
+		# nuke_plugin_path = os.path.abspath(
+		# 	os.path.join(
+		# 		self.plugin_path, 'ftrack_connect_nuke'
+		# 	)
+		# )
+		# environment = ftrack_connect.application.appendPath(
+		# 	self.plugin_path, 'FOUNDRY_ASSET_PLUGIN_PATH', environment
+		# )
 
-		# Set the FTRACK_EVENT_PLUGIN_PATH to include the notification callback
-		# hooks.
-		environment = ftrack_connect.application.appendPath(
-			os.path.join(
-				self.plugin_path, 'crew_hook'
-			), 'FTRACK_EVENT_PLUGIN_PATH', environment
-		)
+		# # Set the FTRACK_EVENT_PLUGIN_PATH to include the notification callback
+		# # hooks.
+		# environment = ftrack_connect.application.appendPath(
+		# 	os.path.join(
+		# 		self.plugin_path, 'crew_hook'
+		# 	), 'FTRACK_EVENT_PLUGIN_PATH', environment
+		# )
 
-		environment = ftrack_connect.application.appendPath(
-			os.path.join(
-				self.plugin_path, '..', 'ftrack_python_api'
-			), 'FTRACK_PYTHON_API_PLUGIN_PATH', environment
-		)
+		# environment = ftrack_connect.application.appendPath(
+		# 	os.path.join(
+		# 		self.plugin_path, '..', 'ftrack_python_api'
+		# 	), 'FTRACK_PYTHON_API_PLUGIN_PATH', environment
+		# )
 
-		environment['NUKE_USE_FNASSETAPI'] = '1'
+		# environment['NUKE_USE_FNASSETAPI'] = '1'
 
 		return environment
 
