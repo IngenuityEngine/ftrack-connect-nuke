@@ -249,9 +249,15 @@ class ApplicationStore(ftrack_connect.application.ApplicationStore):
 			nuke_version_expression = re.compile(
 				r'Nuke(?P<version>{})'.format('|'.join(versions))
 			)
+			'''
+			Note: in vanilla ftrack connect nuke, the expression is:
+			['/', 'usr', 'local', 'Nuke.*', 'Nuke\d.+']
+			Apparently we install Nuke to a different place.
+			'''
+			nuke_path_expression = ['/', 'usr', 'Nuke.*', 'Nuke[\d\.v]+$']
+
 			applications.extend(self._searchFilesystem(
-				# versionExpression=r'Nuke(?P<version>.*)\/.+$',
-				expression=['/', 'usr', 'local', 'Nuke.*', 'Nuke\d.+'],
+				expression=nuke_path_expression,
 				label='Nuke',
 				variant='{version}',
 				applicationIdentifier='nuke_{version}',
@@ -260,8 +266,7 @@ class ApplicationStore(ftrack_connect.application.ApplicationStore):
 			))
 
 			applications.extend(self._searchFilesystem(
-				# versionExpression=r'Nuke(?P<version>.*)\/.+$',
-				expression=['/', 'usr', 'local', 'Nuke.*', 'Nuke\d.+'],
+				expression=nuke_path_expression,
 				label='NukeX',
 				variant='{version}',
 				applicationIdentifier='nukex_{version}',
@@ -271,8 +276,7 @@ class ApplicationStore(ftrack_connect.application.ApplicationStore):
 			))
 
 			applications.extend(self._searchFilesystem(
-				# versionExpression=r'Nuke(?P<version>.*)\/.+$',
-				expression=['/', 'usr', 'local', 'Nuke.*', 'Nuke\d.+'],
+				expression=nuke_path_expression,
 				label='NukeAssist',
 				variant='{version}',
 				applicationIdentifier='nukeassist_{version}',
